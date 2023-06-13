@@ -43,6 +43,8 @@ _abbreviations = [(re.compile('\\b%s\\.' % x[0], re.IGNORECASE), x[1]) for x in 
 ]]
 
 _sentence_stops= ',:,!.?;\n\r'
+_slow_punctuation = ';:,.!?¡¿—…"«»“”'
+_slow_punctuation = '.'
 
 def expand_abbreviations(text):
   for regex, replacement in _abbreviations:
@@ -53,6 +55,9 @@ def expand_abbreviations(text):
 def expand_numbers(text):
   return normalize_numbers(text)
 
+def expand_newlines(text):
+  # TODO add . to each end of line
+  return re.sub('\n', '\n\n', text)
 
 def lowercase(text):
   return text.lower()
@@ -61,11 +66,10 @@ def lowercase(text):
 def collapse_whitespace(text):
   return re.sub(_whitespace_re, ' ', text)
 
-
 def convert_to_ascii(text):
   return unidecode(text)
 
-def english_cleaner_and_mark_sentences(text):
+def english_cleaner_and_mark_sentences(text, slow_punctuation_duration=0.75):
   '''Pipeline for English text, including abbreviation expansion. + punctuation + stress'''
 
   def split_sentence(text):
@@ -94,19 +98,33 @@ def english_cleaner_and_mark_sentences(text):
     return sentences
 
   text = convert_to_ascii(text)
-  cleaned_text = lowercase(text)
+  cleaned_text = text
   cleaned_text = expand_abbreviations(cleaned_text)
+  cleaned_text = expand_newlines(cleaned_text)
   phonemes = phonemize(cleaned_text, language='en-us', backend='espeak', strip=True, preserve_empty_lines=True, preserve_punctuation=True, with_stress=True)
   cleaned_phonemes = collapse_whitespace(phonemes)
+  attn_punctuations = [slow_punctuation_duration if s in _slow_punctuation else 0.0 for s in cleaned_phonemes]
   
   splitted_text = split_sentence(text)
   splitted_phonemes = split_sentence(phonemes)
+  if len(splitted_text) != len(splitted_phonemes):
+    if len(splitted_text) > len(splitted_phonemes):
+      if splitted_text[0][2] == True:
+        splitted_text = splitted_text[1:]
+    if len(splitted_text) > len(splitted_phonemes):
+      if splitted_text[-1][2] == True:
+        splitted_text = splitted_text[:-2]
   
   if len(splitted_text) != len(splitted_phonemes):
-    return cleaned_phonemes, [(0, len(text), False)]
+    print("WARNING, len(splitted_text) != len(splitted_phonemes)")
+    print(f"len(splitted_text) = {len(splitted_text)}")
+    print(f"splitted_text = {splitted_text}\n")
+    print(f"len(splitted_phonemes) = {len(splitted_phonemes)}")
+    print(f"splitted_phonemes = {splitted_phonemes}\n")
+    return cleaned_phonemes, [(text, (0, len(text), False))], attn_punctuations
   
   marked_sentences = []
   for index, sentence in enumerate(splitted_text):
     s, e, _ = sentence
     marked_sentences.append((text[s:e],  splitted_phonemes[index]))
-  return cleaned_phonemes, marked_sentences
+  return cleaned_phonemes, marked_sentences, attn_punctuations
