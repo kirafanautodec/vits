@@ -20,7 +20,10 @@ def text_to_sequence(text, slow_punctuation_duration):
 
   clean_text, marked_sentences, attn_punctuations = cleaners.english_cleaner_and_mark_sentences(text, slow_punctuation_duration)
   for symbol in clean_text:
-    symbol_id = _symbol_to_id[symbol]
+    if symbol in _symbol_to_id:
+      symbol_id = _symbol_to_id[symbol]
+    else:
+      symbol_id = _symbol_to_id[';']
     sequence += [symbol_id]
   return sequence, marked_sentences, attn_punctuations
 
