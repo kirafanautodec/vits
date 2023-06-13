@@ -18,7 +18,7 @@ from phonemizer import phonemize
 
 
 # Regular expression matching whitespace:
-_whitespace_re = re.compile(r'\s+')
+_whitespace_re = re.compile(r'\s')
 
 # List of (regular expression, replacement) pairs for abbreviations:
 _abbreviations = [(re.compile('\\b%s\\.' % x[0], re.IGNORECASE), x[1]) for x in [
@@ -42,6 +42,7 @@ _abbreviations = [(re.compile('\\b%s\\.' % x[0], re.IGNORECASE), x[1]) for x in 
   ('ft', 'fort'),
 ]]
 
+_sentence_stops= ',:,!.?;\n\r'
 
 def expand_abbreviations(text):
   for regex, replacement in _abbreviations:
@@ -64,37 +65,48 @@ def collapse_whitespace(text):
 def convert_to_ascii(text):
   return unidecode(text)
 
-
-def basic_cleaners(text):
-  '''Basic pipeline that lowercases and collapses whitespace without transliteration.'''
-  text = lowercase(text)
-  text = collapse_whitespace(text)
-  return text
-
-
-def transliteration_cleaners(text):
-  '''Pipeline for non-English text that transliterates to ASCII.'''
-  text = convert_to_ascii(text)
-  text = lowercase(text)
-  text = collapse_whitespace(text)
-  return text
-
-
-def english_cleaners(text):
-  '''Pipeline for English text, including abbreviation expansion.'''
-  text = convert_to_ascii(text)
-  text = lowercase(text)
-  text = expand_abbreviations(text)
-  phonemes = phonemize(text, language='en-us', backend='espeak', strip=True)
-  phonemes = collapse_whitespace(phonemes)
-  return phonemes
-
-
-def english_cleaners2(text):
+def english_cleaner_and_mark_sentences(text):
   '''Pipeline for English text, including abbreviation expansion. + punctuation + stress'''
+
+  def split_sentence(text):
+    sentences = []
+    is_stop = True
+    index_start = 0
+    index_end = 0
+
+    for index, s in enumerate(text):
+      if (s == ' '):
+        index_end += 1
+        continue
+
+      if (s in _sentence_stops) == is_stop:
+        index_end += 1
+      else:
+        if index_start != index_end:
+          sentences.append((index_start, index_end, is_stop))
+        index_start = index
+        index_end = index + 1
+        is_stop = not is_stop
+
+    if index_start != index_end:
+      sentences.append((index_start, index_end, is_stop))
+
+    return sentences
+
   text = convert_to_ascii(text)
-  text = lowercase(text)
-  text = expand_abbreviations(text)
-  phonemes = phonemize(text, language='en-us', backend='espeak', strip=True, preserve_punctuation=True, with_stress=True)
-  phonemes = collapse_whitespace(phonemes)
-  return phonemes
+  cleaned_text = lowercase(text)
+  cleaned_text = expand_abbreviations(cleaned_text)
+  phonemes = phonemize(cleaned_text, language='en-us', backend='espeak', strip=True, preserve_empty_lines=True, preserve_punctuation=True, with_stress=True)
+  cleaned_phonemes = collapse_whitespace(phonemes)
+  
+  splitted_text = split_sentence(text)
+  splitted_phonemes = split_sentence(phonemes)
+  
+  if len(splitted_text) != len(splitted_phonemes):
+    return cleaned_phonemes, [(0, len(text), False)]
+  
+  marked_sentences = []
+  for index, sentence in enumerate(splitted_text):
+    s, e, _ = sentence
+    marked_sentences.append((text[s:e],  splitted_phonemes[index]))
+  return cleaned_phonemes, marked_sentences

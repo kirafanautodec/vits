@@ -8,4 +8,8 @@ __pycache__
 
 build
 *.c
-monotonic_align/monotonic_align
+
+tmp
+ckpt
+dist
+*.egg-info

@@ -18,11 +18,11 @@ def text_to_sequence(text, cleaner_names):
   '''
   sequence = []
 
-  clean_text = _clean_text(text, cleaner_names)
+  clean_text, marked_sentences = cleaners.english_cleaner_and_mark_sentences(text)
   for symbol in clean_text:
     symbol_id = _symbol_to_id[symbol]
     sequence += [symbol_id]
-  return sequence
+  return sequence, marked_sentences
 
 
 def cleaned_text_to_sequence(cleaned_text):
@@ -43,12 +43,3 @@ def sequence_to_text(sequence):
     s = _id_to_symbol[symbol_id]
     result += s
   return result
-
-
-def _clean_text(text, cleaner_names):
-  for name in cleaner_names:
-    cleaner = getattr(cleaners, name)
-    if not cleaner:
-      raise Exception('Unknown cleaner: %s' % name)
-    text = cleaner(text)
-  return text
