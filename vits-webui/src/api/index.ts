@@ -43,7 +43,7 @@ export interface TTSResponse {
     data?: TTSResponseData
 }
 
-const BASE_URL = 'http://localhost:12001/tts'
+const BASE_URL = 'http://192.168.0.112:12001/tts'
 
 export function postTTSRequest(data: TTSRequest): Promise<TTSResponse> {
     return axios.post(

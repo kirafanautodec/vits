@@ -27,7 +27,7 @@ tts_service = TTSService()
 
 @app.post("/tts")
 async def tts(req: TTSRequest) -> TTSResponse:
-    try:
+    # try:
         return tts_service.run(req)
-    except Exception as err:
-        return TTSResponse(code=ErrorCode.Unknown, msg=str(err))
+    # except Exception as err:
+    #     return TTSResponse(code=ErrorCode.Unknown, msg=str(err))

@@ -4,7 +4,9 @@ import commons
 import numpy
 import time
 import utils
+from io import BytesIO
 import soundfile
+import base64
 
 from models import SynthesizerTrn
 from text.symbols import symbols
@@ -63,5 +65,7 @@ class TTSService:
             marked_sentences = [MarkedSentence(content=content, start_time=starttime_of_tokens[s], end_time=starttime_of_tokens[e], is_punctuation=p) for content, (s, e, p) in marked_sentences]
             
             audio = audio_tst[0, 0].data.cpu().float().numpy()
-            soundfile.write('w.ogg', audio, samplerate=self.sampling_rate, format='OGG')
-        return TTSResponse(code=ErrorCode.OK, msg='', data=TTSResponseData(marked_sentences=marked_sentences, voice=bytes()))
+            with BytesIO() as f:
+                soundfile.write(f, audio, samplerate=self.sampling_rate, format='MP3')
+                audio_datab64 = base64.b64encode(f.getvalue())
+        return TTSResponse(code=ErrorCode.OK, msg='', data=TTSResponseData(marked_sentences=marked_sentences, voice=audio_datab64))

@@ -18,6 +18,8 @@ html {
   background-color: white;
 }
 #app {
+  height: 100vh;
+  width: 100vw;
   display: block;
   margin: 0;
   padding: 0;
