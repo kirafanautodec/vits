@@ -5,7 +5,7 @@ import numpy
 import time
 import utils
 from io import BytesIO
-import soundfile
+import lameenc
 import base64
 
 from models import SynthesizerTrn
@@ -40,7 +40,7 @@ class TTSService:
         text_norm = torch.LongTensor(text_norm)
         return text_norm, marked_sentences, attn_punctuations
 
-    def run(self, request: TTSRequest) -> TTSResponse:
+    def syn(self, request: TTSRequest) -> TTSResponse:
         if request is None or request.text is None or len(request.text) == 0:
             return TTSResponse(code=ErrorCode.EmptyText, msg='', data=None)
 
@@ -62,10 +62,19 @@ class TTSService:
             ).float().numpy() * (1.0 * self.hop_length / self.sampling_rate)
             duration_of_tokens = numpy.insert(duration_of_tokens, 0, 0)
             starttime_of_tokens = numpy.cumsum(duration_of_tokens)
-            marked_sentences = [MarkedSentence(content=content, start_time=starttime_of_tokens[s], end_time=starttime_of_tokens[e], is_punctuation=p) for content, (s, e, p) in marked_sentences]
-            
+            marked_sentences = [MarkedSentence(content=content, start_time=starttime_of_tokens[s],
+                                               end_time=starttime_of_tokens[e], is_punctuation=p) for content, (s, e, p) in marked_sentences]
+
             audio = audio_tst[0, 0].data.cpu().float().numpy()
-            with BytesIO() as f:
-                soundfile.write(f, audio, samplerate=self.sampling_rate, format='MP3')
-                audio_datab64 = base64.b64encode(f.getvalue())
-        return TTSResponse(code=ErrorCode.OK, msg='', data=TTSResponseData(marked_sentences=marked_sentences, voice=audio_datab64))
+            encoder = lameenc.Encoder()
+            encoder.set_bit_rate(128)
+            encoder.set_in_sample_rate(self.sampling_rate)
+            encoder.set_channels(1)
+            encoder.set_quality(2)
+            mp3_data = encoder.encode(audio)
+            mp3_data += encoder.flush()
+        return TTSResponse(
+            code=ErrorCode.OK, msg='',
+            data=TTSResponseData(
+                marked_sentences=marked_sentences, voice=base64.b64encode(mp3_data))
+        )

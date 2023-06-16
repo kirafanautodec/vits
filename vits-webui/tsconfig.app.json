@@ -8,8 +8,7 @@
     "paths": {
       "@/*": ["./src/*"]
     },
-    "plugins": [
-      "@volar/vue-language-plugin-pug"
-    ]
+    "lib": ["ES2021", "dom"],
+    "plugins": ["@volar/vue-language-plugin-pug"]
   }
 }

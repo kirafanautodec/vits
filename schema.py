@@ -1,10 +1,11 @@
-from typing import List, Optional
+from typing import List, Optional, Generic, TypeVar
 from enum import Enum, IntEnum
 from pydantic import BaseModel, Field
 
 class ErrorCode(IntEnum):
     OK = 0
-    EmptyText = 100
+    InvalidLogin = 100
+    EmptyText = 110
     Unknown = 199
 
 class Dialect(str, Enum):
@@ -48,7 +49,21 @@ class TTSResponseData(BaseModel):
     voice: bytes
 
 
-class TTSResponse(BaseModel):
+class UserLoginRequest(BaseModel):
+    name: str
+    password: str
+    
+class UserLoginResponseData(BaseModel):
+    token: str
+    
+DataT = TypeVar("DataT")
+class Response(BaseModel, Generic[DataT]):
     code: ErrorCode
     msg: Optional[str] = ''
-    data: Optional[TTSResponseData]
+    data: Optional[DataT]
+
+class TTSResponse(Response[TTSResponseData]):
+    pass
+
+class UserLoginResponse(Response[UserLoginResponseData]):
+    pass

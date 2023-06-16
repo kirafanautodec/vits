@@ -1,23 +1,19 @@
 <template lang="pug">
-//- div
-//-     template(v-slot='value')
 Cell
-    div#lyric-warpper
-        span.marked-sentence(
-            v-for='(sentence, index) in props.sentences'
-            :key='index'
-            v-bind:class='{ "bold-lyric": lyricIndex == index && !sentence.is_punctuation }'
-            @click='handleClickLyric(index)'
-            v-html='rawHtml(sentence.content)'
-        )
-Cell
-    AudioPlayer(
-        ref='audioPlayer'
-        :option='getAPOption'
-        :isLoop='false'
-        :progress-interval='100'
-        @playing='handleUpdate'
+  div#lyric-warpper
+    span.marked-sentence(
+      v-for='(sentence, index) in props.sentences'
+      :key='index'
+      v-bind:class='{ "bold-lyric": lyricIndex == index && !sentence.is_punctuation }'
+      @click='handleClickLyric(index)'
+      v-html='rawHtml(sentence.content)'
     )
+Cell
+  AudioPlayer(
+    ref='audioPlayer'
+    :option='getAPOption'
+    @playing='handleUpdate'
+  )
 </template>
 
 <script setup lang="ts">
@@ -28,7 +24,7 @@ import AudioPlayer from 'vue3-audio-player'
 import 'vue3-audio-player/dist/style.css'
 
 const props = defineProps({ sentences: Array<MarkedSentence>, voiceb64: String })
-const audioPlayer = ref<AudioPlayer>(null)
+const audioPlayer = ref<typeof AudioPlayer>(null)
 const lyricIndex = ref<number>(-1)
 
 const getAPOption = computed(() => {
@@ -38,26 +34,35 @@ const getAPOption = computed(() => {
 })
 
 const reset = () => {
-    lyricIndex.value = 0
+  lyricIndex.value = -1
 }
 
 const handleUpdate = () => {
   let i = 0
+  if (props.sentences == undefined) {
+    lyricIndex.value = -1
+    return
+  }
   for (
     ;
     i < props.sentences.length && audioPlayer.value.currentTime > props.sentences[i].end_time;
     ++i
-  ) {}
-  lyricIndex.value = i
+  );
+  if (lyricIndex.value != i) {
+    lyricIndex.value = i
+  }
 }
 
 const handleClickLyric = (index: number) => {
+  if (props.sentences == undefined) {
+    return
+  }
   audioPlayer.value.play()
-  audioPlayer.value.audioPlayer.currentTime = props.sentences[index].start_time
+  audioPlayer.value.audioPlayer.currentTime = props.sentences[index].start_time - 0.1
 }
 
-const rawHtml = (content: str) => {
-    return content.replaceAll('\n', '<br/>')
+const rawHtml = (content: string) => {
+  return content.replaceAll('\n', '<br/>')
 }
 </script>
 
@@ -67,8 +72,7 @@ const rawHtml = (content: str) => {
 }
 
 #lyric-warpper {
-    word-warp: break-all;
-    text-align: left;
-    font-size: 130%
+  text-align: left;
+  font-size: 130%;
 }
 </style>
