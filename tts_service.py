@@ -7,6 +7,7 @@ import utils
 from io import BytesIO
 import lameenc
 import base64
+import soundfile
 
 from models import SynthesizerTrn
 from text.symbols import symbols
@@ -66,15 +67,19 @@ class TTSService:
                                                end_time=starttime_of_tokens[e], is_punctuation=p) for content, (s, e, p) in marked_sentences]
 
             audio = audio_tst[0, 0].data.cpu().float().numpy()
+            wav_file = BytesIO()
+            soundfile.write(wav_file, audio, self.sampling_rate, format='wav')
             encoder = lameenc.Encoder()
-            encoder.set_bit_rate(128)
+            encoder.set_bit_rate(64)
             encoder.set_in_sample_rate(self.sampling_rate)
             encoder.set_channels(1)
             encoder.set_quality(2)
-            mp3_data = encoder.encode(audio)
+            mp3_data = encoder.encode(wav_file.getvalue())
             mp3_data += encoder.flush()
+            wav_file.close()
+            audiob64 = base64.b64encode(mp3_data).decode('ascii')
         return TTSResponse(
             code=ErrorCode.OK, msg='',
             data=TTSResponseData(
-                marked_sentences=marked_sentences, voice=base64.b64encode(mp3_data))
+                marked_sentences=marked_sentences, voice=audiob64)
         )
